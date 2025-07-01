@@ -9,14 +9,14 @@ const transporter = nodemailer.createTransport({
   // secure: true, // true for 465, false for other ports
   // priority: "high",
   // auth: {
-  //   user: "noreply@valleyviewhotelng.com",
-  //   pass: "=HYqoTO8DigV",
+  //   user: "",
+  //   pass: "",
   // },
 
   service: "gmail", // Update with your email service provider
   auth: {
-    user: "adamabdullahiaraga@gmail.com",
-    pass: "tltiwhedunlwgkne",
+    // user: "",
+    // pass: "",
   },
 });
 
