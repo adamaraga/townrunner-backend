@@ -32,7 +32,10 @@ db.sequelize = sequelize;
 db.users = require("./userModel.js")(sequelize, DataTypes);
 db.confirmations = require("./confirmationModel.js")(sequelize, DataTypes);
 db.messages = require("./messageModel.js")(sequelize, DataTypes);
-db.chat = require("./chatModel.js")(sequelize, DataTypes);
+db.chats = require("./chatModel.js")(sequelize, DataTypes);
+db.deliveries = require("./deliveryModel.js")(sequelize, DataTypes);
+db.riders = require("./riderModel.js")(sequelize, DataTypes);
+db.payments = require("./paymentModel.js")(sequelize, DataTypes);
 
 db.sequelize.sync({ force: false }).then(() => {
   console.log("yes re-sync done!");

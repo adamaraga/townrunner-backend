@@ -20,7 +20,7 @@ exports.getUsers = async (req, res) => {
 
     res.status(200).json({ users: rows, totalPages, limit });
   } catch (err) {
-    res.status(500).json(err);
+    res.status(500).json({ error: err.message });
   }
 };
 
@@ -62,7 +62,7 @@ exports.getUsersBySearch = async (req, res) => {
 
     res.status(200).json({ users: rows, totalPages, limit });
   } catch (err) {
-    res.status(500).json(err);
+    res.status(500).json({ error: err.message });
   }
 };
 
@@ -72,7 +72,7 @@ exports.getUser = async (req, res) => {
 
     res.status(200).json(user);
   } catch (err) {
-    res.status(500).json(err);
+    res.status(500).json({ error: err.message });
   }
 };
 
@@ -84,6 +84,6 @@ exports.getUsersChat = async (req, res) => {
 
     res.status(200).json(user);
   } catch (err) {
-    res.status(500).json(err);
+    res.status(500).json({ error: err.message });
   }
 };

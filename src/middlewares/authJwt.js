@@ -43,54 +43,14 @@ isAdmin = async (req, res, next) => {
   }
 };
 
-isAdminOrHr = async (req, res, next) => {
+isRider = async (req, res, next) => {
   try {
     const user = await User.findOne({
       where: { id: req.userId },
     });
 
-    if (user.role !== "admin" && user.role !== "hr") {
-      res.status(403).json({ message: "Require Admin Role!" });
-      return;
-    }
-
-    next();
-    return;
-  } catch (error) {
-    res.status(500).json(error);
-  }
-};
-
-isAdminOrSubadmin = async (req, res, next) => {
-  try {
-    const user = await User.findOne({
-      where: { id: req.userId },
-    });
-
-    if (user.role !== "admin" && user.role !== "subadmin") {
-      res.status(403).json({ message: "Require Admin Role!" });
-      return;
-    }
-
-    next();
-    return;
-  } catch (error) {
-    res.status(500).json(error);
-  }
-};
-
-isAdminOrHrOrSubadmin = async (req, res, next) => {
-  try {
-    const user = await User.findOne({
-      where: { id: req.userId },
-    });
-
-    if (
-      user.role !== "admin" &&
-      user.role !== "hr" &&
-      user.role !== "subadmin"
-    ) {
-      res.status(403).json({ message: "Require Admin Role!" });
+    if (user.role !== "rider") {
+      res.status(403).json({ message: "Require Rider Role!" });
       return;
     }
 
@@ -104,9 +64,7 @@ isAdminOrHrOrSubadmin = async (req, res, next) => {
 const authJwt = {
   verifyToken,
   isAdmin,
-  isAdminOrHr,
-  isAdminOrHrOrSubadmin,
-  isAdminOrSubadmin,
+  isRider,
 };
 
 module.exports = authJwt;

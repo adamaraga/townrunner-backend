@@ -2,6 +2,7 @@
 const nodemailer = require("nodemailer");
 const ejs = require("ejs");
 const process = require("process");
+require("dotenv").config();
 
 const transporter = nodemailer.createTransport({
   // host: "valleyviewhotelng.com",

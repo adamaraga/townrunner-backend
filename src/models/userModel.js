@@ -35,6 +35,12 @@ module.exports = (sequelize, DataTypes) => {
     },
     phone: {
       type: DataTypes.STRING,
+      allowNull: false,
+    },
+    walletBal: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
     },
     googleId: {
       type: DataTypes.STRING,
@@ -48,19 +54,27 @@ module.exports = (sequelize, DataTypes) => {
     },
     referralCodeInvite: {
       type: DataTypes.STRING,
+      allowNull: true,
     },
     subStatus: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
+      type: DataTypes.ENUM("inactive", "active", "past_due"),
+      defaultValue: "inactive",
     },
     subExpiry: {
       type: DataTypes.DATE,
+      allowNull: true,
     },
     subAmount: {
       type: DataTypes.STRING,
+      allowNull: true,
     },
     subPeriod: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    subAuthorizationCode: {
       type: DataTypes.STRING,
+      allowNull: true,
     },
     notificationPush: {
       type: DataTypes.BOOLEAN,
@@ -73,6 +87,11 @@ module.exports = (sequelize, DataTypes) => {
     notificationInApp: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
+    },
+    rating: {
+      type: DataTypes.DECIMAL(3, 2),
+      allowNull: false,
+      defaultValue: 0.0,
     },
   });
 

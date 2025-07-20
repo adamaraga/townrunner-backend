@@ -83,7 +83,7 @@ exports.signup = async (req, res) => {
       accessToken: token,
     });
   } catch (err) {
-    res.status(500).json(err);
+    res.status(500).json({ error: err.message });
   }
 };
 
@@ -114,7 +114,7 @@ exports.sentOtp = async (req, res) => {
 
     res.status(200).json({ success: true, message: "OTP sent" });
   } catch (err) {
-    res.status(500).json(err);
+    res.status(500).json({ error: err.message });
   }
 };
 
@@ -174,17 +174,33 @@ exports.otpVerification = async (req, res) => {
         .json({ success: true, message: "OTP verification successfull" });
     }
   } catch (err) {
-    res.status(500).json(err);
+    res.status(500).json({ error: err.message });
   }
 };
 
 exports.update = async (req, res) => {
   try {
-    const user = await User.update(req.body, {
-      where: {
-        id: req.params.userId,
-      },
-    });
+    let user = null;
+    if (req.body?.addImage) {
+      if (!req?.file?.path) {
+        return res.status(500).json({ message: "Image upload failed" });
+      }
+
+      user = await User.update(
+        { ...req.body, image: req.file.path },
+        {
+          where: {
+            id: req.userId,
+          },
+        }
+      );
+    } else {
+      user = await User.update(req.body, {
+        where: {
+          id: req.userId,
+        },
+      });
+    }
 
     if (!user) {
       res.status(404).json({ message: "User not found, update failed" });
@@ -192,7 +208,7 @@ exports.update = async (req, res) => {
 
     res.status(200).json({ message: "Update successfull" });
   } catch (err) {
-    res.status(500).json(err);
+    res.status(500).json({ error: err.message });
   }
 };
 
@@ -204,7 +220,7 @@ exports.facialVeriSessionId = async (req, res) => {
 
     res.status(200).json({ sessionId: response.SessionId });
   } catch (err) {
-    res.status(500).json(err);
+    res.status(500).json({ error: err.message });
   }
 };
 
@@ -223,7 +239,7 @@ exports.facialVeriResult = async (req, res) => {
 
     res.status(200).json({ isLive, response });
   } catch (err) {
-    res.status(500).json(err);
+    res.status(500).json({ error: err.message });
   }
 };
 
@@ -272,6 +288,6 @@ exports.googleOauthMobile = async (req, res) => {
       accessToken: token,
     });
   } catch (err) {
-    res.status(500).json(err);
+    res.status(500).json({ error: err.message });
   }
 };

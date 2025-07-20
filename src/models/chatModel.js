@@ -5,20 +5,18 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
       allowNull: false,
+      unique: true,
     },
-    conversationId: {
+    deliveryId: {
       type: DataTypes.UUID,
-      allowNull: false,
-    },
-    senderId: {
-      type: DataTypes.UUID,
-      allowNull: false,
-    },
-    text: {
-      type: DataTypes.TEXT,
-      allowNull: false,
+      allowNull: true,
     },
   });
+
+  // Chat.associate = models => {
+  //   Chat.hasMany(models.Message, { foreignKey: 'chatId', as: 'messages' });
+  //   if (models.Delivery) Chat.belongsTo(models.Delivery, { foreignKey: 'deliveryId', as: 'delivery' });
+  // };
 
   return Chat;
 };

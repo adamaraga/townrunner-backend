@@ -7,14 +7,40 @@ const {
   facialVeriSessionId,
   facialVeriResult,
   googleOauthMobile,
+  otpVerification,
+  update,
 } = require("../controllers/auth.controller");
 // require("../config/passport");
+const multer = require("multer");
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "./uploads");
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now();
+    cb(null, uniqueSuffix + "_" + file.originalname);
+  },
+});
+
+const upload = multer({ storage: storage });
 
 // To signup a user
 router.post("/signup", signup);
 
 // To send otp
 router.post("/send-otp", sentOtp);
+
+// To verify otp
+router.post("/verify-otp", otpVerification);
+
+// To update user
+router.post(
+  "/update",
+  [authJwt.verifyToken],
+  upload.single("uploadedFile"),
+  update
+);
 
 // To create and send sessionId
 router.get("/send-sessionid", facialVeriSessionId);
