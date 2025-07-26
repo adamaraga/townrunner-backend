@@ -29,9 +29,9 @@ const onDutyRiders = new Map();
 // Socket authentication middleware
 io.use(async (socket, next) => {
   try {
-    const token = socket.handshake.headers.access_token;
+    const token = socket.handshake.auth.access_token;
     if (!token) return next(new Error("Authentication invalid: No token"));
-    const payload = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    const payload = jwt.verify(token, process.env.SECRET_KEY);
     const user = await User.findByPk(payload.id);
     if (!user) return next(new Error("Authentication invalid: User not found"));
     socket.user = { id: payload.id, role: user.role };
@@ -57,7 +57,7 @@ async function sendNearbyRiders(socket, location, deliveryData = null) {
     .map((r) => ({ ...r, distance: geolib.getDistance(r.coords, location) }))
     .filter((r) => r.distance <= 10000)
     .sort((a, b) => a.distance - b.distance);
-
+  //for Rider within 10KM
   socket.emit("nearbyRiders", list);
   if (deliveryData) {
     list.forEach((r) => io.to(r.socketId).emit("deliveryOffer", deliveryData));
@@ -190,6 +190,16 @@ io.on("connection", (socket) => {
     } catch (err) {
       socket.emit("error", { message: "Message not sent" });
     }
+  });
+
+  socket.join(userId);
+
+  // Handle call signaling
+  socket.on("joinCall", (channelName) => {
+    socket.join(channelName);
+  });
+  socket.on("leaveCall", (channelName) => {
+    socket.leave(channelName);
   });
 });
 

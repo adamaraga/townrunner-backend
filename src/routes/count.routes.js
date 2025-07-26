@@ -3,6 +3,6 @@ const authJwt = require("../middlewares/authJwt");
 
 const router = require("express").Router();
 
-router.get("/dashboard", [authJwt.verifyToken, authJwt.isAdminOrHr], getCounts);
+router.get("/dashboard", [authJwt.verifyToken, authJwt.isAdmin], getCounts);
 
 module.exports = router;

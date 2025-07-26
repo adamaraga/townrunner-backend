@@ -22,13 +22,27 @@ const Confirmation = db.confirmations;
 const SALT_ROUNDS = 10;
 
 exports.signup = async (req, res) => {
+  console.log("req.body", req.body);
   try {
-    const user = await User.findOne({
-      where: { email: req.body.email },
+    const existingUser = await User.findOne({
+      where: {
+        [Op.or]: [{ email: req.body.email }, { phone: req.body.phone }],
+      },
     });
 
-    if (user) {
-      return res.status(500).json({ message: "Email already in use" });
+    if (existingUser) {
+      if (
+        existingUser.email === req.body.email &&
+        existingUser.phone === req.body.phone
+      ) {
+        return res
+          .status(409)
+          .json({ message: "Email and phone number already in use" });
+      } else if (existingUser.email === req.body.email) {
+        return res.status(409).json({ message: "Email already in use" });
+      } else {
+        return res.status(409).json({ message: "Phone number already in use" });
+      }
     }
 
     const referralCode = generator.generate({
@@ -51,7 +65,7 @@ exports.signup = async (req, res) => {
     // );
 
     const token = jwt.sign(
-      { id: user.id.toString() },
+      { id: newUser.id.toString() },
       process.env.SECRET_KEY,
       {}
     );
@@ -93,14 +107,31 @@ exports.sentOtp = async (req, res) => {
   }
 
   const otp = generateOtp();
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 min
 
   try {
+    const existingUser = await User.findOne({
+      where: {
+        phone: req.body.phone,
+      },
+    });
+
+    if (req.body.type === "login" && !existingUser) {
+      return res
+        .status(200)
+        .json({ warningMessage: "User not found, please signup" });
+    }
+
+    if (req.body.type === "signup" && existingUser) {
+      return res.status(200).json({ warningMessage: "Please login" });
+    }
+
     await Confirmation.destroy({
       where: {
         phone: req.body.phone,
       },
     });
+
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 min
 
     const newConf = Confirmation.build({
       phone: req.body.phone,
@@ -108,7 +139,9 @@ exports.sentOtp = async (req, res) => {
       otp: bcrypt.hashSync(otp, SALT_ROUNDS),
     });
 
-    await sendOTP(req.body.phone, otp);
+    // await sendOTP(req.body.phone, otp);
+
+    console.log("otp", otp);
 
     await newConf.save();
 
@@ -137,7 +170,7 @@ exports.otpVerification = async (req, res) => {
     }
 
     // Compare provided code with hashed otp
-    const match = bcrypt.compareSync(otp, record.otp);
+    const match = bcrypt.compareSync(otp, confirmation.otp);
     if (!match) {
       return res.status(400).json({ success: false, message: "Invalid OTP" });
     }
@@ -151,11 +184,9 @@ exports.otpVerification = async (req, res) => {
       });
 
       if (!user) {
-        res.status(200).json({
-          success: true,
-          signup: true,
-          message: "OTP verification successfull",
-        });
+        return res
+          .status(404)
+          .json({ success: false, message: "User not found, please signup" });
       }
 
       const token = jwt.sign(

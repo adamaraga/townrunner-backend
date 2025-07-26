@@ -33,6 +33,7 @@ db.users = require("./userModel.js")(sequelize, DataTypes);
 db.confirmations = require("./confirmationModel.js")(sequelize, DataTypes);
 db.messages = require("./messageModel.js")(sequelize, DataTypes);
 db.chats = require("./chatModel.js")(sequelize, DataTypes);
+db.calls = require("./callModel.js")(sequelize, DataTypes);
 db.deliveries = require("./deliveryModel.js")(sequelize, DataTypes);
 db.riders = require("./riderModel.js")(sequelize, DataTypes);
 db.payments = require("./paymentModel.js")(sequelize, DataTypes);
@@ -41,10 +42,10 @@ db.sequelize.sync({ force: false }).then(() => {
   console.log("yes re-sync done!");
 });
 
-db.users.hasMany(db.confirmations, {
-  foreignKey: "userId",
-  // as: "confirmation",
-});
+// db.users.hasMany(db.confirmations, {
+//   foreignKey: "userId",
+//   // as: "confirmation",
+// });
 // db.confirmations.belongsTo(db.users, {
 //   foreignKey: "userId",
 //   as: "users",

@@ -64,10 +64,10 @@ exports.getMyDeliveries = async (req, res) => {
   const limit = +req.query.limit || 10;
   const offset = (page - 1) * limit;
   try {
-    if (req.query.userId) {
+    if (req.userId) {
       const { count, rows } = await Delivery.findAndCountAll({
         where: {
-          userId: req.query.userId,
+          userId: req.userId,
         },
         limit,
         offset,
