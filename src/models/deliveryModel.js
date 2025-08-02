@@ -17,9 +17,15 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
     },
     distance: {
-      type: DataTypes.UUID,
+      type: DataTypes.INTEGER,
       allowNull: true,
     },
+    // Duration in minutes
+    duration: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+
     // Main route
     originAddress: {
       type: DataTypes.STRING,
@@ -83,14 +89,13 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(4),
       allowNull: true,
     },
-    // Duration in minutes
-    duration: {
-      type: DataTypes.INTEGER,
+
+    price: {
+      type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
     },
-
     // Fare or delivery fee
-    price: {
+    riderPay: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
     },
@@ -101,6 +106,10 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
     },
 
+    paymentReference: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     status: {
       type: DataTypes.ENUM(
         "requested",
@@ -111,6 +120,10 @@ module.exports = (sequelize, DataTypes) => {
       ),
       defaultValue: "requested",
       allowNull: false,
+    },
+    cancelledReason: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
     intransitStatus: {
       type: DataTypes.ENUM("toPickup", "toStop1", "toStop2", "toDropOff"),

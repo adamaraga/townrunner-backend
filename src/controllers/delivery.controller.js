@@ -10,16 +10,22 @@ exports.createDelivery = async (req, res) => {
   }
 
   try {
-    const { originLat, originLng } = req.body;
-
-    const { distanceKm, durationMin, stopsCount } = req.body.eta;
+    const {
+      originLat,
+      originLng,
+      distance,
+      duration,
+      stopsCount,
+      stopLat,
+      stop2Lat,
+    } = req.body;
 
     // check weather at pickup point (or average of all points)
     const bad = await isBadWeather(originLat, originLng);
 
-    const price = calculateDeliveryPrice({
-      distanceKm,
-      durationMin,
+    const { price, riderPay } = calculateDeliveryPrice({
+      distanceKm: distance,
+      durationMin: duration,
       stopsCount,
       date: new Date(),
       isBadWeather: bad,
@@ -30,12 +36,39 @@ exports.createDelivery = async (req, res) => {
       ...req.body,
       price,
       destinationOtp: generateOtp(),
-      stopOtp: generateOtp(),
-      stop2Otp: generateOtp(),
+      stopOtp: stopLat ? generateOtp() : null,
+      stop2Otp: stop2Lat ? generateOtp() : null,
+      userId: req.userId,
+      riderPay,
     });
     // emit new request via socket
     // req.io.emit("delivery:requested", delivery);
     res.status(200).json(delivery);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// get delivery price
+exports.getDeliveryPrice = async (req, res) => {
+  try {
+    const { originLat, originLng, distance, duration, stopsCount } = req.body;
+    console.log("req", req.body);
+
+    // check weather at pickup point (or average of all points)
+    const bad = await isBadWeather(originLat, originLng);
+
+    const { price, riderPay } = calculateDeliveryPrice({
+      distanceKm: distance,
+      durationMin: duration,
+      stopsCount,
+      date: new Date(),
+      isBadWeather: bad,
+    });
+
+    console.log("price", price, riderPay);
+
+    res.status(200).json({ price });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

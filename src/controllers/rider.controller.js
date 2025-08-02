@@ -1,5 +1,6 @@
 const db = require("../models");
 const Rider = db.riders;
+const User = db.users;
 
 // Create a new Rider profile
 exports.createRider = async (req, res) => {
@@ -49,6 +50,33 @@ exports.createRider = async (req, res) => {
   }
 };
 
+// Update Riders status
+exports.updateRiderStatus = async (req, res) => {
+  try {
+    const rider = await Rider.findByPk({
+      where: { userId: req.params.userId },
+    });
+    if (!rider) return res.status(404).json({ message: "Rider Not found" });
+
+    if (req.body?.status) {
+      rider.status = req.body?.status;
+
+      if (req.body?.status === "active") {
+        const user = await User.findByPk(req.params.userId);
+
+        user.role = "rider";
+        await user.save();
+      }
+
+      await rider.save();
+    }
+
+    res.status(200).json(rider);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 // Get all Riders (with pagination)
 exports.getRiders = async (req, res) => {
   const page = +req.query.page || 1;
@@ -72,6 +100,22 @@ exports.getRider = async (req, res) => {
     const rider = await Rider.findByPk(req.params.id);
     if (!rider) return res.status(404).json({ message: "Rider Not found" });
     res.json(rider);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Get Rider status
+exports.getRiderStatus = async (req, res) => {
+  try {
+    const rider = await Rider.findOne({
+      where: {
+        userId: req.userId,
+      },
+    });
+    // if (!rider) return res.status(404).json({ message: "Rider Not found" });
+
+    res.json({ docStatus: !rider ? null : rider?.status });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

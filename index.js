@@ -24,6 +24,10 @@ app.use("/api/delivery", deliveryRoute);
 app.use("/api/payment", paymentRoute);
 app.use("/api/rider", riderRoute);
 
+app.get("/", (req, res) => {
+  res.send("<h1>Hello, Express.js Server!</h1>");
+});
+
 // start server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {

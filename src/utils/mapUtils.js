@@ -9,13 +9,17 @@
  * @returns {number}  Rounded total price in Naira.
  */
 
-async function calculateDeliveryPrice({
+function calculateDeliveryPrice({
   distanceKm,
   durationMin,
   stopsCount = 0,
   date = new Date(),
   isBadWeather = false,
 }) {
+  distanceKm = Number(distanceKm);
+  durationMin = Number(durationMin);
+  stopsCount = Number(stopsCount);
+
   const BASE_FARE = 500; // ₦500
   const RATE_PER_KM = 150; // ₦150/km
   const RATE_PER_MIN = 50; // ₦50/min
@@ -23,6 +27,8 @@ async function calculateDeliveryPrice({
   const MINIMUM_FARE = 800; // ₦800 minimum
   const SURGE_PEAK = 1.2; // +20% peak multiplier
   const SURGE_WEATHER = 1.2; // +20% weather/night multiplier
+
+  const RIDER_PAY = 0.8; // 80% rider pay
 
   // 1) Base components
   let price =
@@ -48,7 +54,9 @@ async function calculateDeliveryPrice({
   if (isBadWeather) price *= SURGE_WEATHER;
 
   // 6) Round to nearest naira
-  return Math.round(price);
+  const finalPrice = Math.round(price / 100) * 100;
+
+  return { price: finalPrice, riderPay: finalPrice * RIDER_PAY };
 }
 
 module.exports = { calculateDeliveryPrice };

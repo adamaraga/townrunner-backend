@@ -2,6 +2,7 @@ const axios = require("axios");
 const { addMonths } = require("date-fns");
 const db = require("../models");
 const Payment = db.payments;
+const Delivery = db.deliveries;
 
 // Initialize transaction (server-side) to get reference
 exports.initPayment = async (req, res) => {
@@ -17,7 +18,7 @@ exports.initPayment = async (req, res) => {
       { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET}` } }
     );
 
-    await Payment.create({
+    const payment = await Payment.build({
       amount,
       userId: req.userId,
       deliveryId,
@@ -28,6 +29,17 @@ exports.initPayment = async (req, res) => {
       reason,
       subPeriod,
     });
+
+    const delivery = await Delivery.findByPk(deliveryId);
+
+    if (!delivery) {
+      return res.status(404).json({ message: "Delivery not found" });
+    }
+
+    delivery.paymentReference = response.data.data.reference;
+
+    await payment.save();
+    await delivery.save();
 
     return res.status(200).json({
       paymentUrl: response.data.data.authorization_url,
@@ -84,16 +96,15 @@ exports.verifyPayment = async (req, res) => {
     if (!payment)
       return res.status(404).json({ message: "Payment record not found" });
 
-    payment.status = status === "success" ? "success" : "failed";
+    payment.status = status;
     await payment.save();
 
     if (status !== "success") {
-      res.status(200).json({ status: payment.status, reference });
+      return res.status(200).json({ status: payment.status, reference });
     }
 
     if (payment?.reason === "delivery") {
       if (payment.deliveryId && payment.status === "success") {
-        const Delivery = db.deliveries;
         const delivery = await Delivery.findByPk(payment.deliveryId);
         if (!delivery) {
           return res.status(404).json({ message: "Delivery not found" });

@@ -93,7 +93,7 @@ exports.signup = async (req, res) => {
     //   notificationInApp: newUser.notificationInApp,
     // });
     res.status(200).json({
-      ...newUser,
+      ...newUser.dataValues,
       accessToken: token,
     });
   } catch (err) {
@@ -196,7 +196,7 @@ exports.otpVerification = async (req, res) => {
       );
 
       res.status(200).json({
-        ...user,
+        ...user?.dataValues,
         accessToken: token,
       });
     } else {
@@ -315,7 +315,7 @@ exports.googleOauthMobile = async (req, res) => {
     );
 
     res.status(200).json({
-      ...user,
+      ...user?.dataValues,
       accessToken: token,
     });
   } catch (err) {

@@ -4,6 +4,8 @@ const authJwt = require("../middlewares/authJwt");
 const router = require("express").Router();
 // Create request
 router.post("/", [authJwt.verifyToken], deliveryCtrl.createDelivery);
+// price requests
+router.post("/price", [authJwt.verifyToken], deliveryCtrl.getDeliveryPrice);
 // List requests
 router.get("/", [authJwt.verifyToken], deliveryCtrl.getDeliveries);
 // My List requests

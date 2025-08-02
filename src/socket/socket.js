@@ -107,16 +107,15 @@ io.on("connection", (socket) => {
 
     socket.on("searchrider", async (deliveryId) => {
       try {
-        const delivery = await Delivery.findByPk(deliveryId, {
-          include: ["riderUserId", "userId"],
-        });
+        const delivery = await Delivery.findByPk(deliveryId);
         if (!delivery)
           return socket.emit("error", { message: "Delivery not found" });
 
         let retries = 0;
         let accepted = false;
-        const MAX_RETRIES = 20;
+        const MAX_RETRIES = 1;
         const interval = setInterval(async () => {
+          // console.log("retries", retries);
           if (accepted || retries >= MAX_RETRIES) {
             clearInterval(interval);
             if (!accepted)
@@ -126,7 +125,10 @@ io.on("connection", (socket) => {
           retries++;
           await sendNearbyRiders(
             socket,
-            delivery.pickup || socket.user.coords,
+            {
+              latitude: delivery.originLat,
+              longitude: delivery.originLng,
+            },
             delivery
           );
         }, 10000);
@@ -161,9 +163,7 @@ io.on("connection", (socket) => {
   socket.on("subscribeDelivery", async (deliveryId) => {
     socket.join(`delivery_${deliveryId}`);
     try {
-      const delivery = await Delivery.findByPk(deliveryId, {
-        include: ["riderUserId", "userId"],
-      });
+      const delivery = await Delivery.findByPk(deliveryId);
       socket.emit("deliveryData", delivery);
     } catch (err) {
       socket.emit("error", { message: "Failed to fetch delivery data" });

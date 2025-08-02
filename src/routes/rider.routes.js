@@ -31,18 +31,24 @@ const riderFields = [
 
 // Routes
 router.post(
-  "/",
+  "/add",
   [authJwt.verifyToken],
   upload.fields(riderFields),
   riderCtrl.createRider
 );
 router.get("/", [authJwt.verifyToken], riderCtrl.getRiders);
-router.get("/:id", [authJwt.verifyToken], riderCtrl.getRider);
+router.get("/one/:id", [authJwt.verifyToken], riderCtrl.getRider);
+router.get("/status", [authJwt.verifyToken], riderCtrl.getRiderStatus);
 router.patch(
   "/:id",
   [authJwt.verifyToken],
   upload.fields(riderFields),
   riderCtrl.updateRider
+);
+router.patch(
+  "/update-status/:userId",
+  [authJwt.verifyToken, authJwt.isAdmin],
+  riderCtrl.updateRiderStatus
 );
 router.delete("/:id", [authJwt.verifyToken], riderCtrl.deleteRider);
 
