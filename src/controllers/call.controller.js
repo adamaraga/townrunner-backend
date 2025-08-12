@@ -25,21 +25,25 @@ function generateAgoraToken(channelName, uid = 0) {
 // Create a new call
 exports.createCall = async (req, res) => {
   try {
-    const { calleeId } = req.body;
-    const callerId = req.user.id;
+    const { calleeId, callerName } = req.body;
+    const callerId = req.userId;
     const channelName = `call_${uuidv4()}`;
     const token = generateAgoraToken(channelName);
-    const session = await CallSession.create({
+    const session = await Call.create({
       callerId,
       calleeId,
       channelName,
       token,
     });
     // notify callee via socket
-    req.io
-      .to(calleeId)
-      .emit("incomingCall", { sessionId: session.id, channelName, callerId });
-    res.status(201).json(session);
+    req.io.to(calleeId).emit("incomingCall", {
+      id: session.id,
+      channelName,
+      callerId,
+      callerName,
+      token,
+    });
+    res.status(200).json(session);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -48,9 +52,11 @@ exports.createCall = async (req, res) => {
 // Get session token (if needed separately)
 exports.getToken = async (req, res) => {
   try {
-    const session = await CallSession.findByPk(req.params.id);
+    const session = await Call.findByPk(req.params.id);
     if (!session) return res.status(404).json({ error: "Session not found" });
-    res.json({ channelName: session.channelName, token: session.token });
+    res
+      .status(200)
+      .json({ channelName: session.channelName, token: session.token });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -59,7 +65,7 @@ exports.getToken = async (req, res) => {
 // End call
 exports.endCall = async (req, res) => {
   try {
-    const session = await CallSession.findByPk(req.params.id);
+    const session = await Call.findByPk(req.params.id);
     if (!session) return res.status(404).json({ error: "Session not found" });
     session.status = "ended";
     await session.save();

@@ -4,6 +4,8 @@ const authJwt = require("../middlewares/authJwt");
 const router = require("express").Router();
 // Create request
 router.post("/", [authJwt.verifyToken], deliveryCtrl.createDelivery);
+// Create request Schedule
+router.post("/schedule", [authJwt.verifyToken], deliveryCtrl.scheduleDelivery);
 // price requests
 router.post("/price", [authJwt.verifyToken], deliveryCtrl.getDeliveryPrice);
 // List requests
@@ -13,7 +15,8 @@ router.get("/my", [authJwt.verifyToken], deliveryCtrl.getMyDeliveries);
 // Get single
 router.get("/:id", [authJwt.verifyToken], deliveryCtrl.getDelivery);
 // Accept by rider
-router.patch("/:id/accept", [authJwt.verifyToken], deliveryCtrl.acceptDelivery);
+// router.patch("/accept/:id", [authJwt.verifyToken], deliveryCtrl.acceptDelivery);
+router.patch("/accept/:id", deliveryCtrl.acceptDelivery);
 // Update (status/location)
 router.patch("/:id", [authJwt.verifyToken], deliveryCtrl.updateDelivery);
 

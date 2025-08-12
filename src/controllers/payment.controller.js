@@ -6,17 +6,26 @@ const Delivery = db.deliveries;
 
 // Initialize transaction (server-side) to get reference
 exports.initPayment = async (req, res) => {
-  const { amount, email, deliveryId, description, reason, subPeriod } =
-    req.body;
+  const { amount, email, deliveryId, description, reason } = req.body;
   const type = "deposit";
   const amountInKobo = parseInt(amount) * 100;
+
   try {
+    console.log("amountInKobo", amountInKobo, email);
+
     // Call Paystack initialize
     const response = await axios.post(
       "https://api.paystack.co/transaction/initialize",
-      { amountInKobo, email },
-      { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET}` } }
+      { amount: amountInKobo, email },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.PAYSTACK_SECRET}`,
+          "Content-Type": "application/json",
+        },
+      }
     );
+
+    console.log("response", response.data.data.reference);
 
     const payment = await Payment.build({
       amount,
@@ -27,7 +36,7 @@ exports.initPayment = async (req, res) => {
       description,
       type,
       reason,
-      subPeriod,
+      subPeriod: req?.body?.subPeriod ? req?.body?.subPeriod : null,
     });
 
     const delivery = await Delivery.findByPk(deliveryId);
@@ -46,6 +55,8 @@ exports.initPayment = async (req, res) => {
       reference: response.data.data.reference,
     });
   } catch (err) {
+    console.log("err", err.message);
+
     return res.status(500).json({ error: err.message });
   }
 };

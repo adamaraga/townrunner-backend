@@ -1,3 +1,4 @@
+const { Op } = require("sequelize");
 const db = require("../models");
 const Chat = db.chats;
 const Message = db.messages;
@@ -8,7 +9,7 @@ exports.getOrCreateChat = async (req, res) => {
   try {
     let chat = await Chat.findOne({ where: { deliveryId } });
     if (!chat) chat = await Chat.create({ deliveryId });
-    res.json(chat);
+    res.status(200).json(chat);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -22,7 +23,66 @@ exports.getMessages = async (req, res) => {
       where: { chatId },
       order: [["createdAt", "ASC"]],
     });
-    res.json(messages);
+
+    res.status(200).json(messages);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Fetch messages for a chat
+exports.updateReadCount = async (req, res) => {
+  const { chatId } = req.params;
+  const { count, role } = req.body;
+
+  try {
+    const chat = await Chat.findByPk(chatId);
+
+    if (role === "rider") {
+      chat.riderReadCount = +count;
+      chat.save();
+    } else {
+      chat.userReadCount = +count;
+      chat.save();
+    }
+
+    res.status(200).json({ message: "Done" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Fetch messages for a chat
+exports.getUnReadCount = async (req, res) => {
+  const { deliveryId, role } = req.params;
+  try {
+    let chat = await Chat.findOne({ where: { deliveryId } });
+    if (!chat) {
+      const newChat = await Chat.create({ deliveryId });
+      return res.status(200).json({ unreadCount: 0, chatId: newChat?.id });
+    }
+
+    const messagesCount = await Message.count({
+      where: {
+        chatId: chat?.id,
+        senderId: {
+          [Op.ne]: req.userId,
+        },
+      },
+    });
+
+    const totalCount = Number(messagesCount);
+    const readCount = Number(
+      role === "rider" ? chat?.riderReadCount : chat?.userReadCount
+    );
+
+    // If parsing fails, default to 0
+    const validTotal = Number.isNaN(totalCount) ? 0 : totalCount;
+    const validRead = Number.isNaN(readCount) ? 0 : readCount;
+
+    const unreadCount = Math.max(0, validTotal - validRead);
+
+    res.status(200).json({ unreadCount, chatId: chat?.id });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -30,13 +90,15 @@ exports.getMessages = async (req, res) => {
 
 // Add message
 exports.sendMessage = async (req, res) => {
-  const { chatId, text } = req.body;
+  const { chatId, text, receiverId, senderName } = req.body;
   const senderId = req.userId;
   try {
     const message = await Message.create({ chatId, senderId, text });
     // emit via socket
-    req.io.to(`chat_${chatId}`).emit("newMessage", message);
-    res.status(201).json(message);
+    req.io
+      .to(receiverId)
+      .emit("newMessage", { ...message?.dataValues, senderName });
+    res.status(200).json(message);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

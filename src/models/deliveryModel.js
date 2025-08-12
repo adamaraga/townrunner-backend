@@ -39,6 +39,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DECIMAL(10, 7),
       allowNull: false,
     },
+    pickupOtp: {
+      type: DataTypes.STRING(4),
+      allowNull: false,
+    },
     destinationAddress: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -98,6 +102,14 @@ module.exports = (sequelize, DataTypes) => {
     riderPay: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
+    },
+    riderLat: {
+      type: DataTypes.DECIMAL(10, 7),
+      allowNull: true,
+    },
+    riderLng: {
+      type: DataTypes.DECIMAL(10, 7),
+      allowNull: true,
     },
 
     paymentStatus: {

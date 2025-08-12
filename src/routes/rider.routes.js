@@ -37,7 +37,7 @@ router.post(
   riderCtrl.createRider
 );
 router.get("/", [authJwt.verifyToken], riderCtrl.getRiders);
-router.get("/one/:id", [authJwt.verifyToken], riderCtrl.getRider);
+router.get("/one/:userId", [authJwt.verifyToken], riderCtrl.getRider);
 router.get("/status", [authJwt.verifyToken], riderCtrl.getRiderStatus);
 router.patch(
   "/:id",

@@ -9,6 +9,7 @@ const {
   googleOauthMobile,
   otpVerification,
   update,
+  updatePushToken,
 } = require("../controllers/auth.controller");
 // require("../config/passport");
 const multer = require("multer");
@@ -41,6 +42,8 @@ router.post(
   upload.single("uploadedFile"),
   update
 );
+
+router.post("/update/token", [authJwt.verifyToken], updatePushToken);
 
 // To create and send sessionId
 router.get("/send-sessionid", facialVeriSessionId);

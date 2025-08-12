@@ -79,6 +79,10 @@ module.exports = (sequelize, DataTypes) => {
     },
     notificationPush: {
       type: DataTypes.BOOLEAN,
+      allowNull: true,
+    },
+    notificationPushToken: {
+      type: DataTypes.STRING,
       defaultValue: false,
     },
     notificationEmail: {

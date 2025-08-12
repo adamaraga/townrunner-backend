@@ -97,9 +97,15 @@ exports.getRiders = async (req, res) => {
 // Get single Rider by id
 exports.getRider = async (req, res) => {
   try {
-    const rider = await Rider.findByPk(req.params.id);
+    const rider = await Rider.findOne({
+      where: {
+        userId: req.params.userId,
+      },
+    });
+    const user = await User.findByPk(req.params.userId);
     if (!rider) return res.status(404).json({ message: "Rider Not found" });
-    res.json(rider);
+    if (!user) return res.status(404).json({ message: "User Not found" });
+    res.json({ rider, user });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

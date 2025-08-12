@@ -243,6 +243,27 @@ exports.update = async (req, res) => {
   }
 };
 
+exports.updatePushToken = async (req, res) => {
+  try {
+    const user = await User.update(
+      { notificationPushToken: req.body.token },
+      {
+        where: {
+          id: req.userId,
+        },
+      }
+    );
+
+    if (!user) {
+      res.status(404).json({ message: "User not found, update failed" });
+    }
+
+    res.status(200).json({ message: "Update successfull" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 exports.facialVeriSessionId = async (req, res) => {
   try {
     console.log("facial");

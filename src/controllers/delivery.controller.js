@@ -36,10 +36,39 @@ exports.createDelivery = async (req, res) => {
       ...req.body,
       price,
       destinationOtp: generateOtp(),
+      pickupOtp: generateOtp(),
       stopOtp: stopLat ? generateOtp() : null,
       stop2Otp: stop2Lat ? generateOtp() : null,
       userId: req.userId,
       riderPay,
+    });
+    // emit new request via socket
+    // req.io.emit("delivery:requested", delivery);
+    res.status(200).json(delivery);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Schedule a new delivery request
+exports.scheduleDelivery = async (req, res) => {
+  function generateOtp() {
+    return Math.floor(1000 + Math.random() * 9000).toString();
+  }
+
+  try {
+    const { stopLat, stop2Lat, scheduleDateTime } = req.body;
+
+    //   const otp = generateOtp();
+    const delivery = await Delivery.create({
+      ...req.body,
+      price: 0,
+      destinationOtp: generateOtp(),
+      pickupOtp: generateOtp(),
+      stopOtp: stopLat ? generateOtp() : null,
+      stop2Otp: stop2Lat ? generateOtp() : null,
+      userId: req.userId,
+      riderPay: 0,
     });
     // emit new request via socket
     // req.io.emit("delivery:requested", delivery);
@@ -139,7 +168,9 @@ exports.getDelivery = async (req, res) => {
 exports.acceptDelivery = async (req, res) => {
   try {
     const { id } = req.params;
-    const riderUserId = req.userId;
+    const { latitude, longitude, riderId } = req.body;
+    // const riderUserId = req.userId;
+    const riderUserId = riderId;
 
     const delivery = await Delivery.findByPk(id);
     if (!delivery) {
@@ -152,11 +183,14 @@ exports.acceptDelivery = async (req, res) => {
     }
     delivery.status = "accepted";
     delivery.riderUserId = riderUserId;
+    delivery.riderLat = latitude;
+    delivery.riderLng = longitude;
+    delivery.intransitStatus = "toPickup";
     await delivery.save();
 
     // req.io.emit("delivery:accepted", delivery);
-    req.socket.to(`delivery_${id}`).emit("deliveryUpdate", delivery);
-    req.socket.to(`delivery_${id}`).emit("deliveryAccepted");
+    req.io.to(`delivery_${id}`).emit("deliveryUpdate", delivery);
+    req.io.to(`delivery_${id}`).emit("deliveryAccepted");
 
     res.status(200).json(delivery);
   } catch (err) {
@@ -184,7 +218,7 @@ exports.updateDelivery = async (req, res) => {
     //     currentLat: updates.currentLat,
     //     currentLng: updates.currentLng,
     //   });
-    req.socket.to(`delivery_${id}`).emit("deliveryUpdate", delivery);
+    req.io.to(`delivery_${id}`).emit("deliveryUpdate", delivery);
 
     res.status(200).json(delivery);
   } catch (err) {

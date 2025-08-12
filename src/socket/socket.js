@@ -53,7 +53,14 @@ function updateNearbyriders() {
 
 // Helper: send nearby riders to a customer socket
 async function sendNearbyRiders(socket, location, deliveryData = null) {
+  if (!location) {
+    // console.warn('sendNearbyRiders called with invalid location:', location);
+    socket.emit("nearbyRiders", []);
+    return [];
+  }
+
   const list = Array.from(onDutyRiders.values())
+    .filter((r) => r.coords)
     .map((r) => ({ ...r, distance: geolib.getDistance(r.coords, location) }))
     .filter((r) => r.distance <= 10000)
     .sort((a, b) => a.distance - b.distance);
@@ -108,14 +115,15 @@ io.on("connection", (socket) => {
     socket.on("searchrider", async (deliveryId) => {
       try {
         const delivery = await Delivery.findByPk(deliveryId);
-        if (!delivery)
+        if (!delivery) {
           return socket.emit("error", { message: "Delivery not found" });
+        }
 
         let retries = 0;
         let accepted = false;
-        const MAX_RETRIES = 1;
+        const MAX_RETRIES = 10;
         const interval = setInterval(async () => {
-          // console.log("retries", retries);
+          console.log("retries", retries);
           if (accepted || retries >= MAX_RETRIES) {
             clearInterval(interval);
             if (!accepted)
@@ -126,26 +134,49 @@ io.on("connection", (socket) => {
           await sendNearbyRiders(
             socket,
             {
-              latitude: delivery.originLat,
-              longitude: delivery.originLng,
+              latitude: parseFloat(delivery.originLat),
+              longitude: parseFloat(delivery.originLng),
             },
             delivery
           );
-        }, 10000);
+        }, 7000);
 
-        socket.on("deliveryAccepted", () => {
-          accepted = true;
-          clearInterval(interval);
-        });
+        // socket.on("deliveryAccepted", () => {
+        //   accepted = true;
+        //   clearInterval(interval);
+        // });
 
-        socket.on("cancelDelivery", async () => {
-          clearInterval(interval);
-          await Delivery.update(
-            { status: "cancelled" },
-            { where: { id: deliveryId } }
-          );
-          socket.emit("deliveryCanceled", { message: "Delivery canceled" });
-        });
+        // Listen for *any* deliveryAccepted, but only act on ours:
+        const onAccept = (acceptedId) => {
+          if (acceptedId === deliveryId) {
+            accepted = true;
+            clearInterval(interval);
+            socket.off("deliveryAccepted", onAccept);
+          }
+        };
+        socket.on("deliveryAccepted", onAccept);
+
+        // socket.on("cancelDelivery", async () => {
+        //   clearInterval(interval);
+        //   await Delivery.update(
+        //     { status: "cancelled" },
+        //     { where: { id: deliveryId } }
+        //   );
+        //   socket.emit("deliveryCanceled", { message: "Delivery canceled" });
+        // });
+        const onCancel = (cancelId) => {
+          if (cancelId === deliveryId) {
+            clearInterval(interval);
+            socket.off("deliveryAccepted", onAccept);
+            socket.off("cancelDelivery", onCancel);
+            Delivery.update(
+              { status: "cancelled" },
+              { where: { id: deliveryId } }
+            );
+            socket.emit("deliveryCanceled", { message: "Delivery canceled" });
+          }
+        };
+        socket.on("cancelDelivery", onCancel);
       } catch (err) {
         console.error("searchrider error", err.message);
         socket.emit("error", { message: "Error searching for delivery" });
@@ -156,8 +187,11 @@ io.on("connection", (socket) => {
   socket.on("subscribeToRiderLocation", (riderId) => {
     const rider = onDutyRiders.get(riderId);
 
-    if (rider) socket.join(`rider_${riderId}`);
-    socket.emit("riderLocationUpdate", { riderId, coords: rider.coords });
+    console.log("rider", rider);
+    if (rider?.coords) {
+      socket.join(`rider_${riderId}`);
+      socket.emit("riderLocationUpdate", { riderId, coords: rider?.coords });
+    }
   });
 
   socket.on("subscribeDelivery", async (deliveryId) => {
@@ -171,22 +205,25 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    if (role === "rider") onDutyRiders.delete(userId);
+    if (role === "rider") {
+      onDutyRiders.delete(userId);
+      updateNearbyriders();
+    }
     console.log(`User disconnected: ${userId} (${role})`);
   });
 
-  socket.on("joinChat", (chatId) => {
-    socket.join(`chat_${chatId}`);
-  });
+  // socket.on("joinChat", (chatId) => {
+  //   socket.join(`chat_${chatId}`);
+  // });
   // listen for client send
-  socket.on("chatMessage", async ({ chatId, text }) => {
+  socket.on("chatMessage", async ({ chatId, text, receiverId }) => {
     try {
       const message = await db.messages.create({
         chatId,
         senderId: socket.user.id,
         text,
       });
-      io.to(`chat_${chatId}`).emit("newMessage", message);
+      io.to(receiverId).emit("newMessage", message);
     } catch (err) {
       socket.emit("error", { message: "Message not sent" });
     }
