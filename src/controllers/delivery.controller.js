@@ -1,5 +1,6 @@
 const db = require("../models");
 const Delivery = db.deliveries;
+const User = db.users;
 const { isBadWeather } = require("../utils/weather");
 const { calculateDeliveryPrice } = require("../utils/mapUtils");
 
@@ -221,6 +222,37 @@ exports.updateDelivery = async (req, res) => {
     req.io.to(`delivery_${id}`).emit("deliveryUpdate", delivery);
 
     res.status(200).json(delivery);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// rate delivery
+exports.rateDelivery = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rating, feedback } = req.body;
+    const delivery = await Delivery.findByPk(id);
+    if (!delivery) {
+      return res.status(404).json({ message: "delivery Not found" });
+    }
+    const user = await User.findByPk(delivery?.riderUserId);
+
+    const totalRatings = user.rating * user.ratingNo; // sum of all previous ratings
+    const updatedNo = user.ratingNo + 1;
+    const updatedRating = (totalRatings + Number(rating)) / updatedNo;
+
+    user.rating = updatedRating;
+    user.ratingNo = updatedNo;
+    delivery.rating = Number(rating);
+    if (feedback) {
+      delivery.feedback = feedback;
+    }
+
+    await user.save();
+    await delivery.save();
+
+    res.status(200).json({ message: "success" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

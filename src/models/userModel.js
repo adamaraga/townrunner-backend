@@ -98,6 +98,11 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: 0.0,
     },
+    ratingNo: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
   });
 
   return User;

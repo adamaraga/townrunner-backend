@@ -150,6 +150,15 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DATE,
       allowNull: true,
     },
+    feedback: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    rating: {
+      type: DataTypes.DECIMAL(3, 2),
+      allowNull: false,
+      defaultValue: 0.0,
+    },
   });
 
   //   // Associations (assuming User and Driver models are defined)

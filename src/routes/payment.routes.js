@@ -6,6 +6,20 @@ const router = require("express").Router();
 // Initialize Paystack transaction
 router.post("/init", [authJwt.verifyToken], paymentCtrl.initPayment);
 
+// get payment transaction
+router.get(
+  "/transaction",
+  [authJwt.verifyToken],
+  paymentCtrl.getMyTransactions
+);
+
+// get payment transaction
+router.get(
+  "/transaction/:id",
+  [authJwt.verifyToken],
+  paymentCtrl.getMyTransaction
+);
+
 // Callback redirect from WebView or manual verify
 router.get(
   "/verify/:reference",

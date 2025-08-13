@@ -105,6 +105,15 @@ io.on("connection", (socket) => {
       }
     });
   }
+  socket.on("subscribeDelivery", async (deliveryId) => {
+    socket.join(`delivery_${deliveryId}`);
+    try {
+      const delivery = await Delivery.findByPk(deliveryId);
+      socket.emit("deliveryData", delivery);
+    } catch (err) {
+      socket.emit("error", { message: "Failed to fetch delivery data" });
+    }
+  });
 
   if (role === "user") {
     socket.on("subscribeToZone", (customerCoords) => {
@@ -191,16 +200,6 @@ io.on("connection", (socket) => {
     if (rider?.coords) {
       socket.join(`rider_${riderId}`);
       socket.emit("riderLocationUpdate", { riderId, coords: rider?.coords });
-    }
-  });
-
-  socket.on("subscribeDelivery", async (deliveryId) => {
-    socket.join(`delivery_${deliveryId}`);
-    try {
-      const delivery = await Delivery.findByPk(deliveryId);
-      socket.emit("deliveryData", delivery);
-    } catch (err) {
-      socket.emit("error", { message: "Failed to fetch delivery data" });
     }
   });
 

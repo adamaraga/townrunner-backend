@@ -19,5 +19,7 @@ router.get("/:id", [authJwt.verifyToken], deliveryCtrl.getDelivery);
 router.patch("/accept/:id", deliveryCtrl.acceptDelivery);
 // Update (status/location)
 router.patch("/:id", [authJwt.verifyToken], deliveryCtrl.updateDelivery);
+// rate
+router.patch("/rate/:id", [authJwt.verifyToken], deliveryCtrl.rateDelivery);
 
 module.exports = router;

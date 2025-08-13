@@ -36,7 +36,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
     },
     type: {
-      type: DataTypes.ENUM("deposit", "withdral"),
+      type: DataTypes.ENUM("deposit", "withdraw"),
       allowNull: false,
       defaultValue: "deposit",
     },
@@ -46,7 +46,7 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: "delivery",
     },
     status: {
-      type: DataTypes.ENUM("pending", "success", "failed"),
+      type: DataTypes.STRING,
       allowNull: false,
       defaultValue: "pending",
     },
