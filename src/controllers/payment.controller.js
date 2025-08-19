@@ -1,5 +1,4 @@
 const axios = require("axios");
-const { addMonths } = require("date-fns");
 const db = require("../models");
 const Payment = db.payments;
 const Delivery = db.deliveries;
@@ -62,7 +61,7 @@ exports.initPayment = async (req, res) => {
 };
 
 exports.walletWithdral = async (req, res) => {
-  const { amount, description } = req.body;
+  const { amount, description, deliveryId } = req.body;
   const type = "withdraw";
   try {
     const user = await User.findByPk(req.userId);
@@ -71,22 +70,40 @@ exports.walletWithdral = async (req, res) => {
     }
 
     if (parseFloat(amount) > parseFloat(user.walletBal)) {
-      return res.status(500).json({ message: "Insufficient amount in wallet" });
+      return res.status(500).json({
+        message: "Insufficient amount in wallet",
+        walletBal: user.walletBal,
+      });
     } else {
       user.walletBal = parseFloat(user.walletBal) - parseFloat(amount);
+      if (deliveryId) {
+        const delivery = await Delivery.findByPk(deliveryId);
+
+        if (!delivery) {
+          return res.status(404).json({ message: "Delivery not found" });
+        }
+
+        delivery.paymentStatus = "paid";
+
+        await delivery.save();
+        req.io.to(`delivery_${deliveryId}`).emit("deliveryUpdate", delivery);
+      }
+
       await user.save();
       await Payment.create({
         amount,
         userId: req.userId,
         description,
+        deliveryId: deliveryId ? deliveryId : null,
         type,
         reason: "wallet",
-        staus: "success",
+        status: "success",
       });
 
       return res.status(200).json({
         message: "Payment Successful",
-        status: success,
+        walletBal: user.walletBal,
+        status: "success",
       });
     }
   } catch (err) {
@@ -144,26 +161,26 @@ exports.verifyPayment = async (req, res) => {
         .status(200)
         .json({ status: payment.status, reference, walletBal: user.walletBal });
     }
-    if (payment?.reason === "subscription") {
-      const user = await User.findByPk(payment?.userId);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      user.subPeriod = payment?.subPeriod;
-      user.subAmount = payment?.amount;
-      const baseDate = user.subExpiry ? new Date(user.subExpiry) : new Date();
-      // Compute the new expiry
-      const newExpiry = addMonths(baseDate, subPeriod);
+    // if (payment?.reason === "subscription") {
+    //   const user = await User.findByPk(payment?.userId);
+    //   if (!user) {
+    //     return res.status(404).json({ message: "User not found" });
+    //   }
+    //   user.subPeriod = payment?.subPeriod;
+    //   user.subAmount = payment?.amount;
+    //   const baseDate = user.subExpiry ? new Date(user.subExpiry) : new Date();
+    //   // Compute the new expiry
+    //   const newExpiry = addMonths(baseDate, subPeriod);
 
-      // Update & persist
-      user.subExpiry = newExpiry;
-      user.subStatus = true;
-      user.subAuthorizationCode = authorization
-        ? authorization.authorization_code
-        : null;
-      await user.save();
-      req.io.emit("subscription:added", { userId: user?.id });
-    }
+    //   // Update & persist
+    //   user.subExpiry = newExpiry;
+    //   user.subStatus = true;
+    //   user.subAuthorizationCode = authorization
+    //     ? authorization.authorization_code
+    //     : null;
+    //   await user.save();
+    //   req.io.emit("subscription:added", { userId: user?.id });
+    // }
 
     return res.status(200).json({ status: payment.status, reference });
   } catch (err) {

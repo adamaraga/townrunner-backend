@@ -1,6 +1,7 @@
 const db = require("../models");
 const Delivery = db.deliveries;
 const User = db.users;
+const Payment = db.payments;
 const { isBadWeather } = require("../utils/weather");
 const { calculateDeliveryPrice } = require("../utils/mapUtils");
 
@@ -126,8 +127,10 @@ exports.getMyDeliveries = async (req, res) => {
   const page = +req.query.page || 1;
   const limit = +req.query.limit || 10;
   const offset = (page - 1) * limit;
+
+  // console.log("first", req.params?.role);
   try {
-    if (req.userId) {
+    if (req.params.role === "user") {
       const { count, rows } = await Delivery.findAndCountAll({
         where: {
           userId: req.userId,
@@ -140,12 +143,14 @@ exports.getMyDeliveries = async (req, res) => {
     } else {
       const { count, rows } = await Delivery.findAndCountAll({
         where: {
-          riderUserId: req.query.riderUserId,
+          riderUserId: req.userId,
         },
         limit,
         offset,
         order: [["createdAt", "DESC"]],
       });
+      // console.log("req.userId", req.userId, count);
+
       res.status(200).json({ deliveries: rows, total: count, page, limit });
     }
   } catch (err) {
@@ -177,7 +182,7 @@ exports.acceptDelivery = async (req, res) => {
     if (!delivery) {
       return res.status(404).json({ message: "Delivery Not found" });
     }
-    if (delivery.status === "accepted") {
+    if (delivery.riderUserId) {
       return res
         .status(500)
         .json({ message: "Delivery is no longer available" });
@@ -205,11 +210,37 @@ exports.updateDelivery = async (req, res) => {
     const { id } = req.params;
     const updates = req.body;
     const delivery = await Delivery.findByPk(id);
+    let deliveryStatus = delivery?.status;
     if (!delivery) {
       return res.status(404).json({ message: "delivery Not found" });
     }
 
     Object.assign(delivery, updates);
+    let walletBal = null;
+    if (
+      req.body?.status === "cancelled" &&
+      delivery?.paymentStatus === "paid" &&
+      deliveryStatus !== "cancelled"
+    ) {
+      const user = await User.findByPk(req.userId);
+
+      if (!user) {
+        return res.status(404).json({ message: "User Not found" });
+      }
+
+      user.walletBal = parseFloat(user.walletBal) + parseFloat(delivery?.price);
+      walletBal = user.walletBal;
+      await Payment.create({
+        amount: delivery?.price,
+        userId: req.userId,
+        description: "Rereimbursement for cancelled delivery",
+        deliveryId: delivery?.id,
+        type: "deposit",
+        reason: "wallet",
+        status: "success",
+      });
+      await user.save();
+    }
     await delivery.save();
     // emit update events
     // if (updates.status)
@@ -221,7 +252,11 @@ exports.updateDelivery = async (req, res) => {
     //   });
     req.io.to(`delivery_${id}`).emit("deliveryUpdate", delivery);
 
-    res.status(200).json(delivery);
+    if (walletBal) {
+      res.status(200).json({ delivery, walletBal });
+    } else {
+      res.status(200).json(delivery);
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

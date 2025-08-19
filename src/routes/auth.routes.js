@@ -10,6 +10,8 @@ const {
   otpVerification,
   update,
   updatePushToken,
+  updateNotification,
+  deleteUser,
 } = require("../controllers/auth.controller");
 // require("../config/passport");
 const multer = require("multer");
@@ -44,6 +46,7 @@ router.post(
 );
 
 router.post("/update/token", [authJwt.verifyToken], updatePushToken);
+router.post("/update/notification", [authJwt.verifyToken], updateNotification);
 
 // To create and send sessionId
 router.get("/send-sessionid", facialVeriSessionId);
@@ -67,6 +70,9 @@ router.get("/send-result/:sessionId", facialVeriResult);
 
 // Google Oauth for mobile
 router.get("/google/mobile", googleOauthMobile);
+
+// Delete Account
+router.post("/delete", [authJwt.verifyToken, authJwt.verifyToken], deleteUser);
 
 // To login a user
 // router.post("/signin", signin);

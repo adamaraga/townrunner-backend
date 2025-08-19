@@ -20,6 +20,13 @@ router.get(
   paymentCtrl.getMyTransaction
 );
 
+// get payment transaction
+router.post(
+  "/wallet/withdraw",
+  [authJwt.verifyToken],
+  paymentCtrl.walletWithdral
+);
+
 // Callback redirect from WebView or manual verify
 router.get(
   "/verify/:reference",

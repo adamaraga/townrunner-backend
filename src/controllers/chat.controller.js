@@ -40,10 +40,10 @@ exports.updateReadCount = async (req, res) => {
 
     if (role === "rider") {
       chat.riderReadCount = +count;
-      chat.save();
+      await chat.save();
     } else {
       chat.userReadCount = +count;
-      chat.save();
+      await chat.save();
     }
 
     res.status(200).json({ message: "Done" });

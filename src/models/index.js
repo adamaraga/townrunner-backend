@@ -37,6 +37,7 @@ db.calls = require("./callModel.js")(sequelize, DataTypes);
 db.deliveries = require("./deliveryModel.js")(sequelize, DataTypes);
 db.riders = require("./riderModel.js")(sequelize, DataTypes);
 db.payments = require("./paymentModel.js")(sequelize, DataTypes);
+db.accounts = require("./accountModel.js")(sequelize, DataTypes);
 
 db.sequelize.sync({ force: false }).then(() => {
   console.log("yes re-sync done!");

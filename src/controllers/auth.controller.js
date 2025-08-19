@@ -211,33 +211,60 @@ exports.otpVerification = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
+    console.log("first", req.body);
     let user = null;
     if (req.body?.addImage) {
+      console.log("req?.file?.path", req?.file?.path);
       if (!req?.file?.path) {
         return res.status(500).json({ message: "Image upload failed" });
       }
 
-      user = await User.update(
-        { ...req.body, image: req.file.path },
-        {
-          where: {
-            id: req.userId,
-          },
-        }
-      );
+      user = await User.findByPk(req.userId);
+      if (!user) {
+        return res
+          .status(404)
+          .json({ message: "User not found, update failed" });
+      }
+
+      user.phone = req.body?.phone;
+      user.firstName = req.body?.firstName;
+      user.lastName = req.body?.lastName;
+      user.email = req.body?.email;
+      user.image = req.file.path;
+
+      await user.save();
+      //   {
+      //     phone: req.body?.phone,
+      //     firstName: req.body?.firstName,
+      //     lastName: req.body?.lastName,
+      //     email: req.body?.email,
+      //     image: req.file.path,
+      //   },
+      //   {
+      //     where: {
+      //       id: req.userId,
+      //     },
+      //   }
+      // );
     } else {
-      user = await User.update(req.body, {
-        where: {
-          id: req.userId,
-        },
-      });
+      user = await User.findByPk(req.userId);
+
+      if (!user) {
+        return res
+          .status(404)
+          .json({ message: "User not found, update failed" });
+      }
+
+      user.phone = req.body?.phone;
+      user.firstName = req.body?.firstName;
+      user.lastName = req.body?.lastName;
+      user.email = req.body?.email;
+
+      await user.save();
     }
 
-    if (!user) {
-      res.status(404).json({ message: "User not found, update failed" });
-    }
-
-    res.status(200).json({ message: "Update successfull" });
+    // console.log("user", user);
+    res.status(200).json(user);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -255,7 +282,40 @@ exports.updatePushToken = async (req, res) => {
     );
 
     if (!user) {
-      res.status(404).json({ message: "User not found, update failed" });
+      return res.status(404).json({ message: "User not found, update failed" });
+    }
+
+    res.status(200).json({ message: "Update successfull" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.updateNotification = async (req, res) => {
+  const {
+    notificationInApp,
+    notificationPush,
+    notificationEmail,
+    notificationPushToken,
+  } = req.body;
+
+  try {
+    const user = await User.update(
+      {
+        notificationInApp,
+        notificationPush,
+        notificationEmail,
+        notificationPushToken,
+      },
+      {
+        where: {
+          id: req.userId,
+        },
+      }
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found, update failed" });
     }
 
     res.status(200).json({ message: "Update successfull" });
@@ -341,5 +401,23 @@ exports.googleOauthMobile = async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+};
+
+exports.deleteUser = async (req, res) => {
+  if (req.body.url) {
+    fs.unlinkSync(`./${req.body.url}`);
+  }
+
+  try {
+    await User.destroy({
+      where: {
+        id: req.userId,
+      },
+    });
+
+    res.status(200).json({ message: "User deleted successfully" });
+  } catch (err) {
+    res.status(500).json(err);
   }
 };

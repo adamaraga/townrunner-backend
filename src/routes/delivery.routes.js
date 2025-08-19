@@ -11,7 +11,7 @@ router.post("/price", [authJwt.verifyToken], deliveryCtrl.getDeliveryPrice);
 // List requests
 router.get("/", [authJwt.verifyToken], deliveryCtrl.getDeliveries);
 // My List requests
-router.get("/my", [authJwt.verifyToken], deliveryCtrl.getMyDeliveries);
+router.get("/my/:role", [authJwt.verifyToken], deliveryCtrl.getMyDeliveries);
 // Get single
 router.get("/:id", [authJwt.verifyToken], deliveryCtrl.getDelivery);
 // Accept by rider

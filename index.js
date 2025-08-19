@@ -11,6 +11,7 @@ const callRoute = require("./src/routes/call.routes");
 const deliveryRoute = require("./src/routes/delivery.routes");
 const paymentRoute = require("./src/routes/payment.routes");
 const riderRoute = require("./src/routes/rider.routes");
+const accountRoute = require("./src/routes/account.routes");
 
 app.use(cors());
 
@@ -23,6 +24,7 @@ app.use("/api/call", callRoute);
 app.use("/api/delivery", deliveryRoute);
 app.use("/api/payment", paymentRoute);
 app.use("/api/rider", riderRoute);
+app.use("/api/account", accountRoute);
 
 app.get("/", (req, res) => {
   res.send("<h1>Hello, Express.js Server!</h1>");

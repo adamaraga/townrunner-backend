@@ -18,7 +18,7 @@ module.exports = (sequelize, DataTypes) => {
     // reference returned by Paystack
     reference: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
       unique: true,
     },
     // amount in Naria
