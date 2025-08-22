@@ -120,7 +120,12 @@ exports.verifyPayment = async (req, res) => {
       return res.status(404).json({ message: "Payment record not found" });
     }
 
-    if (payment.status === "success") {
+    if (
+      payment.status === "success" ||
+      payment.status === "failed" ||
+      payment.status === "reversed" ||
+      payment.status === "abandoned"
+    ) {
       return res.status(200).json({ status: payment.status, reference });
     }
 
@@ -145,7 +150,8 @@ exports.verifyPayment = async (req, res) => {
         }
         delivery.paymentStatus = "paid";
         await delivery.save();
-        req.io.emit("delivery:paid", { deliveryId: delivery.id });
+        req.io.to(`delivery_${delivery.id}`).emit("deliveryUpdate", delivery);
+        // req.io.emit("delivery:paid", { deliveryId: delivery.id });
       }
     }
     if (payment?.reason === "wallet") {
@@ -156,7 +162,7 @@ exports.verifyPayment = async (req, res) => {
       user.walletBal =
         parseFloat(user?.walletBal) + parseFloat(payment?.amount);
       await user.save();
-      req.io.emit("wallet:deposit", { userId: user?.id });
+      // req.io.emit("wallet:deposit", { userId: user?.id });
       return res
         .status(200)
         .json({ status: payment.status, reference, walletBal: user.walletBal });

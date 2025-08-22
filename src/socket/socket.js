@@ -120,78 +120,82 @@ io.on("connection", (socket) => {
       socket.user.coords = customerCoords;
       sendNearbyRiders(socket, customerCoords);
     });
-
-    socket.on("searchrider", async (deliveryId) => {
-      try {
-        const delivery = await Delivery.findByPk(deliveryId);
-        if (!delivery) {
-          return socket.emit("error", { message: "Delivery not found" });
-        }
-
-        let retries = 0;
-        let accepted = false;
-        const MAX_RETRIES = 10;
-        const interval = setInterval(async () => {
-          console.log("retries", retries);
-          if (accepted || retries >= MAX_RETRIES) {
-            clearInterval(interval);
-            if (!accepted)
-              socket.emit("error", { message: "No riders found." });
-            return;
-          }
-          retries++;
-          await sendNearbyRiders(
-            socket,
-            {
-              latitude: parseFloat(delivery.originLat),
-              longitude: parseFloat(delivery.originLng),
-            },
-            delivery
-          );
-        }, 7000);
-
-        // socket.on("deliveryAccepted", () => {
-        //   accepted = true;
-        //   clearInterval(interval);
-        // });
-
-        // Listen for *any* deliveryAccepted, but only act on ours:
-        const onAccept = (acceptedId) => {
-          if (acceptedId === deliveryId) {
-            accepted = true;
-            clearInterval(interval);
-            socket.off("deliveryAccepted", onAccept);
-          }
-        };
-        socket.on("deliveryAccepted", onAccept);
-
-        // socket.on("cancelDelivery", async () => {
-        //   clearInterval(interval);
-        //   await Delivery.update(
-        //     { status: "cancelled" },
-        //     { where: { id: deliveryId } }
-        //   );
-        //   socket.emit("deliveryCanceled", { message: "Delivery canceled" });
-        // });
-        const onCancel = (cancelId) => {
-          if (cancelId === deliveryId) {
-            clearInterval(interval);
-            socket.off("deliveryAccepted", onAccept);
-            socket.off("cancelDelivery", onCancel);
-            Delivery.update(
-              { status: "cancelled" },
-              { where: { id: deliveryId } }
-            );
-            socket.emit("deliveryCanceled", { message: "Delivery canceled" });
-          }
-        };
-        socket.on("cancelDelivery", onCancel);
-      } catch (err) {
-        console.error("searchrider error", err.message);
-        socket.emit("error", { message: "Error searching for delivery" });
-      }
-    });
   }
+  socket.on("searchrider", async (deliveryId) => {
+    try {
+      const delivery = await Delivery.findByPk(deliveryId);
+      if (!delivery) {
+        return socket.emit("error", { message: "Delivery not found" });
+      }
+
+      let retries = 0;
+      let accepted = false;
+      const MAX_RETRIES = 10;
+      const interval = setInterval(async () => {
+        console.log("retries", retries);
+        if (accepted || retries >= MAX_RETRIES) {
+          clearInterval(interval);
+          if (!accepted) socket.emit("error", { message: "No riders found." });
+          return;
+        }
+        retries++;
+        await sendNearbyRiders(
+          socket,
+          {
+            latitude: parseFloat(delivery.originLat),
+            longitude: parseFloat(delivery.originLng),
+          },
+          delivery
+        );
+      }, 7000);
+
+      // socket.on("deliveryAccepted", () => {
+      //   accepted = true;
+      //   clearInterval(interval);
+      // });
+
+      // Listen for *any* deliveryAccepted, but only act on ours:
+      const onAccept = (acceptedId) => {
+        console.log(
+          "searchrider received deliveryAccepted",
+          acceptedId,
+          "for",
+          deliveryId
+        );
+        if (String(acceptedId) === String(deliveryId)) {
+          accepted = true;
+          clearInterval(interval);
+          socket.off("deliveryAccepted", onAccept);
+        }
+      };
+      socket.on("deliveryAccepted", onAccept);
+
+      // socket.on("cancelDelivery", async () => {
+      //   clearInterval(interval);
+      //   await Delivery.update(
+      //     { status: "cancelled" },
+      //     { where: { id: deliveryId } }
+      //   );
+      //   socket.emit("deliveryCanceled", { message: "Delivery canceled" });
+      // });
+      const onCancel = (cancelId) => {
+        if (cancelId === deliveryId) {
+          clearInterval(interval);
+          socket.off("deliveryAccepted", onAccept);
+          socket.off("cancelDelivery", onCancel);
+          Delivery.update(
+            { status: "cancelled" },
+            { where: { id: deliveryId } }
+          );
+          socket.emit("deliveryCanceled", { message: "Delivery canceled" });
+        }
+      };
+      socket.on("cancelDelivery", onCancel);
+    } catch (err) {
+      console.error("searchrider error", err.message);
+      socket.emit("error", { message: "Error searching for delivery" });
+    }
+  });
 
   socket.on("subscribeToRiderLocation", (riderId) => {
     const rider = onDutyRiders.get(riderId);

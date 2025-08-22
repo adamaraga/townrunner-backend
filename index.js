@@ -2,6 +2,7 @@ require("dotenv").config();
 const cors = require("cors");
 const { app, server } = require("./src/socket/socket.js");
 // require('./src/jobs/subscriptionRenewal.job.js');
+const crypto = require("crypto");
 
 const authRoute = require("./src/routes/auth.routes");
 const userRoute = require("./src/routes/user.routes");
@@ -12,6 +13,7 @@ const deliveryRoute = require("./src/routes/delivery.routes");
 const paymentRoute = require("./src/routes/payment.routes");
 const riderRoute = require("./src/routes/rider.routes");
 const accountRoute = require("./src/routes/account.routes");
+const webhookRoute = require("./src/routes/webhook.routes");
 
 app.use(cors());
 
@@ -25,6 +27,7 @@ app.use("/api/delivery", deliveryRoute);
 app.use("/api/payment", paymentRoute);
 app.use("/api/rider", riderRoute);
 app.use("/api/account", accountRoute);
+app.use("/api/paystack", webhookRoute);
 
 app.get("/", (req, res) => {
   res.send("<h1>Hello, Express.js Server!</h1>");

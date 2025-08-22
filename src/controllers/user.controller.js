@@ -68,7 +68,8 @@ exports.getUsersBySearch = async (req, res) => {
 
 exports.getUser = async (req, res) => {
   try {
-    const user = await User.findOne({ where: { id: req.params.userId } });
+    const user = await User.findByPk(req.params.userId);
+    if (!user) return res.status(404).json({ message: "User Not found" });
 
     res.status(200).json(user);
   } catch (err) {

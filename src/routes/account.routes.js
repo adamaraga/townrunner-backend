@@ -9,6 +9,9 @@ router.post("/add", [authJwt.verifyToken], accountCtrl.createAccount);
 // Get banks
 router.get("/banks", [authJwt.verifyToken], accountCtrl.getBanks);
 
+// Get my account
+router.get("/myAccounts", [authJwt.verifyToken], accountCtrl.getMyAccounts);
+
 // Pay rider
 router.post("/riderPayout", [authJwt.verifyToken], accountCtrl.payRider);
 

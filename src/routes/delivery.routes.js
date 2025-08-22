@@ -15,8 +15,8 @@ router.get("/my/:role", [authJwt.verifyToken], deliveryCtrl.getMyDeliveries);
 // Get single
 router.get("/:id", [authJwt.verifyToken], deliveryCtrl.getDelivery);
 // Accept by rider
-// router.patch("/accept/:id", [authJwt.verifyToken], deliveryCtrl.acceptDelivery);
-router.patch("/accept/:id", deliveryCtrl.acceptDelivery);
+router.patch("/accept/:id", [authJwt.verifyToken], deliveryCtrl.acceptDelivery);
+// router.patch("/accept/:id", deliveryCtrl.acceptDelivery);
 // Update (status/location)
 router.patch("/:id", [authJwt.verifyToken], deliveryCtrl.updateDelivery);
 // rate

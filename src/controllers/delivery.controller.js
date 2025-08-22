@@ -130,7 +130,7 @@ exports.getMyDeliveries = async (req, res) => {
 
   // console.log("first", req.params?.role);
   try {
-    if (req.params.role === "user") {
+    if (req.params.role !== "rider") {
       const { count, rows } = await Delivery.findAndCountAll({
         where: {
           userId: req.userId,
@@ -175,8 +175,10 @@ exports.acceptDelivery = async (req, res) => {
   try {
     const { id } = req.params;
     const { latitude, longitude, riderId } = req.body;
-    // const riderUserId = req.userId;
-    const riderUserId = riderId;
+    const riderUserId = req.userId;
+    // const riderUserId = riderId;
+
+    if (!riderUserId) return res.status(404).json({ message: "Auth error" });
 
     const delivery = await Delivery.findByPk(id);
     if (!delivery) {
@@ -196,7 +198,9 @@ exports.acceptDelivery = async (req, res) => {
 
     // req.io.emit("delivery:accepted", delivery);
     req.io.to(`delivery_${id}`).emit("deliveryUpdate", delivery);
-    req.io.to(`delivery_${id}`).emit("deliveryAccepted");
+    // console.log("first", String(id));
+    req.io.to(`delivery_${id}`).emit("deliveryAccepted", String(id));
+    req.io.emit("deliveryAccepted", String(id));
 
     res.status(200).json(delivery);
   } catch (err) {

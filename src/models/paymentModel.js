@@ -40,6 +40,14 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: "deposit",
     },
+    transfer_code: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    refunded: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
     reason: {
       type: DataTypes.ENUM("delivery", "wallet", "subscription"),
       allowNull: false,

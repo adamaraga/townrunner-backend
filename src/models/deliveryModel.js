@@ -138,8 +138,18 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
     },
     intransitStatus: {
-      type: DataTypes.ENUM("toPickup", "toStop1", "toStop2", "toDropOff"),
+      type: DataTypes.ENUM(
+        "toPickup",
+        "atPickup",
+        "toStop1",
+        "atStop1",
+        "toStop2",
+        "atStop2",
+        "toDropOff",
+        "atDropOff"
+      ),
       allowNull: true,
+      defaultValue: "toPickup",
     },
     scheduleStatus: {
       type: DataTypes.ENUM("unscheduled", "scheduled", "ongoing", "done"),

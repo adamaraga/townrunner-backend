@@ -16,7 +16,7 @@ router.get(
 
 // router.get("/all/chat", [authJwt.verifyToken], getUsersChat);
 
-router.get("/:userId", [authJwt.verifyToken, authJwt.isAdmin], getUser);
+router.get("/:userId", [authJwt.verifyToken], getUser);
 
 router.get(
   "/search/:query/:page/:limit",
