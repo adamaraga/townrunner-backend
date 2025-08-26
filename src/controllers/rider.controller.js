@@ -1,6 +1,7 @@
 const db = require("../models");
 const Rider = db.riders;
 const User = db.users;
+const Facial = db.facials;
 
 // Create a new Rider profile
 exports.createRider = async (req, res) => {
@@ -119,9 +120,17 @@ exports.getRiderStatus = async (req, res) => {
         userId: req.userId,
       },
     });
+    const facial = await Facial.findOne({
+      where: {
+        userId: req.userId,
+      },
+    });
     // if (!rider) return res.status(404).json({ message: "Rider Not found" });
 
-    res.json({ docStatus: !rider ? null : rider?.status });
+    res.json({
+      docStatus: !rider ? null : rider?.status,
+      facial: !facial ? null : "Done",
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

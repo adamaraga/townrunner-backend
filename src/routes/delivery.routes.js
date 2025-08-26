@@ -19,6 +19,12 @@ router.patch("/accept/:id", [authJwt.verifyToken], deliveryCtrl.acceptDelivery);
 // router.patch("/accept/:id", deliveryCtrl.acceptDelivery);
 // Update (status/location)
 router.patch("/:id", [authJwt.verifyToken], deliveryCtrl.updateDelivery);
+// confirm
+router.patch(
+  "/confirm/:id",
+  [authJwt.verifyToken],
+  deliveryCtrl.confirmDelivery
+);
 // rate
 router.patch("/rate/:id", [authJwt.verifyToken], deliveryCtrl.rateDelivery);
 

@@ -266,6 +266,91 @@ exports.updateDelivery = async (req, res) => {
   }
 };
 
+exports.confirmDelivery = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const delivery = await Delivery.findByPk(id);
+    let deliveryStatus = delivery?.status;
+    if (!delivery) {
+      return res.status(404).json({ message: "delivery Not found" });
+    }
+
+    if (
+      req?.body?.status === "completed" &&
+      deliveryStatus !== "completed" &&
+      req?.body?.otp
+    ) {
+      if (delivery?.riderUserId !== req.userId) {
+        return res.status(401).json({ message: "Authentication Error" });
+      }
+      if (req?.body?.otp !== delivery?.destinationOtp) {
+        return res.status(401).json({ message: "Incorrect OTP" });
+      }
+
+      const user = await User.findByPk(req.userId);
+
+      if (!user) {
+        return res.status(404).json({ message: "User Not found" });
+      }
+
+      user.walletBal =
+        parseFloat(user.walletBal) + parseFloat(delivery?.riderPay);
+      const walletBal = user.walletBal;
+      await Payment.create({
+        amount: delivery?.riderPay,
+        userId: req.userId,
+        description: "Payment for completing delivery",
+        deliveryId: delivery?.id,
+        type: "deposit",
+        reason: "wallet",
+        status: "success",
+      });
+
+      await user.save();
+
+      delivery.status = "completed";
+
+      await delivery.save();
+
+      req.io.to(`delivery_${id}`).emit("deliveryUpdate", delivery);
+
+      return res.status(200).json({ delivery, walletBal });
+    }
+
+    if (req?.body?.otp && req?.body?.intransitStatus === "toStop2") {
+      if (req?.body?.otp !== delivery?.stopOtp) {
+        return res.status(401).json({ message: "Incorrect OTP" });
+      }
+
+      delivery.intransitStatus = req?.body?.intransitStatus;
+      await delivery.save();
+
+      req.io.to(`delivery_${id}`).emit("deliveryUpdate", delivery);
+      return res.status(200).json(delivery);
+    }
+
+    if (req?.body?.otp && req?.body?.intransitStatus === "toDropOff") {
+      if (
+        req?.body?.otp !== delivery?.stopOtp &&
+        req?.body?.otp !== delivery?.stop2Otp
+      ) {
+        return res.status(401).json({ message: "Incorrect OTP" });
+      }
+
+      delivery.intransitStatus = req?.body?.intransitStatus;
+
+      await delivery.save();
+
+      req.io.to(`delivery_${id}`).emit("deliveryUpdate", delivery);
+      return res.status(200).json(delivery);
+    }
+
+    res.status(200).json({ message: "Success" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 // rate delivery
 exports.rateDelivery = async (req, res) => {
   try {

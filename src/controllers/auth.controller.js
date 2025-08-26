@@ -5,21 +5,54 @@ const sendMail = require("../middlewares/SendMail");
 const generator = require("generate-password");
 const { sendOTP } = require("../middlewares/sendOTP");
 const { Op } = require("sequelize");
-const { Rekognition } = require("@aws-sdk/client-rekognition");
+const {
+  RekognitionClient,
+  CreateFaceLivenessSessionCommand,
+  CreateCollectionCommand,
+  GetFaceLivenessSessionResultsCommand,
+  IndexFacesCommand,
+  DeleteFacesCommand,
+  SearchFacesByImageCommand,
+} = require("@aws-sdk/client-rekognition");
 const { OAuth2Client } = require("google-auth-library");
 
+const User = db.users;
+const Confirmation = db.confirmations;
+const Facial = db.facials;
+
 const getRekognitionClient = () => {
-  const rekognitionClient = new Rekognition({
-    region: "eu-west-1",
+  const rekognitionClient = new RekognitionClient({
+    region: process.env.AWS_REGION || "eu-west-1",
   });
+  // const rekognitionClient = new Rekognition({
+  //   region: "eu-west-1",
+  // });
 
   return rekognitionClient;
 };
 
-const User = db.users;
-const Confirmation = db.confirmations;
-
 const SALT_ROUNDS = 10;
+
+const COLLECTION_ID = process.env.REKOG_COLLECTION || "riders_collection";
+const LIVENESS_CONFIDENCE_THRESHOLD =
+  Number(process.env.LIVENESS_CONFIDENCE_THRESHOLD) || 70;
+const FACE_MATCH_THRESHOLD = Number(process.env.FACE_MATCH_THRESHOLD) || 90;
+
+// helper: coerce AuditImage bytes to Buffer
+function auditImageToBuffer(auditImage) {
+  if (!auditImage) return null;
+  // SDK may give Buffer or base64 string; handle both
+  if (auditImage.Bytes) {
+    if (Buffer.isBuffer(auditImage.Bytes)) return auditImage.Bytes;
+    // if it is a base64 string
+    try {
+      return Buffer.from(auditImage.Bytes, "base64");
+    } catch (e) {
+      return null;
+    }
+  }
+  return null;
+}
 
 exports.signup = async (req, res) => {
   console.log("req.body", req.body);
@@ -324,11 +357,25 @@ exports.updateNotification = async (req, res) => {
   }
 };
 
+// create collection (run once)
+exports.createFacialCollection = async (req, res) => {
+  try {
+    const rek = getRekognitionClient();
+    await rek.send(
+      new CreateCollectionCommand({ CollectionId: COLLECTION_ID })
+    );
+    return res.status(200).json({ ok: true, collectionId: COLLECTION_ID });
+  } catch (err) {
+    console.error("createCollection error:", err);
+    // if already exists, Rekognition returns an error — handle gracefully
+    return res.status(500).json({ error: err.message || err });
+  }
+};
+
 exports.facialVeriSessionId = async (req, res) => {
   try {
-    console.log("facial");
-    const rekognition = getRekognitionClient();
-    const response = await rekognition.createFaceLivenessSession({});
+    const rek = getRekognitionClient();
+    const response = await rek.send(new CreateFaceLivenessSessionCommand({}));
 
     res.status(200).json({ sessionId: response.SessionId });
   } catch (err) {
@@ -336,22 +383,148 @@ exports.facialVeriSessionId = async (req, res) => {
   }
 };
 
-exports.facialVeriResult = async (req, res) => {
-  if (!req.params.sessionId) {
-    return res.status(400).json({ error: "Missing sessionId" });
-  }
-
+// enroll Facial
+exports.facialRegistration = async (req, res) => {
   try {
-    const rekognition = getRekognitionClient();
-    const response = await rekognition.getFaceLivenessSessionResults({
-      SessionId: req.params.sessionId,
+    const riderUserId = req.params.userId;
+    const sessionId = req.params.sessionId;
+    if (!sessionId || !riderUserId)
+      return res.status(400).json({ message: "sessionId and userID required" });
+
+    const rek = getRekognitionClient();
+    const getRes = await rek.send(
+      new GetFaceLivenessSessionResultsCommand({
+        SessionId: sessionId,
+      })
+    );
+    console.log("Liveness raw:", JSON.stringify(getRes, null, 2));
+    // const getRessss = await rek.getFaceLivenessSessionResults({
+    //   SessionId: sessionId,
+    // });
+    // check liveness confidence
+    const confidence = getRes.Confidence ?? 0;
+    console.log("confidence", confidence);
+    if (confidence < LIVENESS_CONFIDENCE_THRESHOLD) {
+      return res.status(400).json({ message: "Liveness check failed" });
+    }
+
+    const auditImages = getRes.AuditImages || [];
+    if (!auditImages.length) {
+      return res.status(400).json({ message: "No audit images returned." });
+    }
+
+    // choose first audit image with Bytes
+    const chosen = auditImages.find((img) => img.Bytes) || auditImages[0];
+    const imageBuffer = auditImageToBuffer(chosen);
+    if (!imageBuffer) {
+      return res.status(500).json({ message: "Could not extract image" });
+    }
+
+    // Index face
+    const indexCmd = new IndexFacesCommand({
+      CollectionId: COLLECTION_ID,
+      ExternalImageId: riderUserId,
+      Image: { Bytes: imageBuffer },
+      MaxFaces: 1,
+    });
+    const indexRes = await rek.send(indexCmd);
+
+    const faceRecord = indexRes.FaceRecords?.[0]?.Face;
+    if (!faceRecord) {
+      return res.status(500).json({ message: "No facial Record" });
+    }
+
+    const faceId = faceRecord.FaceId;
+
+    // persist minimal data
+    await Facial.create({
+      riderUserId,
+      faceId,
+      collectionId: COLLECTION_ID,
     });
 
-    const isLive = response.Confidence > 70;
-
-    res.status(200).json({ isLive, response });
+    return res.status(200).json({ ok: true, faceId, confidence });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json(err);
+  }
+};
+
+// exports.facialVeriResult = async (req, res) => {
+//   if (!req.params.sessionId) {
+//     return res.status(400).json({ error: "Missing sessionId" });
+//   }
+
+//   try {
+//     const rekognition = getRekognitionClient();
+//     const response = await rekognition.getFaceLivenessSessionResults({
+//       SessionId: req.params.sessionId,
+//     });
+
+//     const isLive = response.Confidence > 70;
+
+//     res.status(200).json({ isLive, response });
+//   } catch (err) {
+//     res.status(500).json({ error: err.message });
+//   }
+// };
+
+// 4) verify: use sessionId -> getFaceLivenessSessionResults -> SearchFacesByImage (Image.Bytes)
+exports.verifyFacial = async (req, res) => {
+  try {
+    const riderUserId = req.params.userId;
+    const sessionId = req.params.sessionId;
+    if (!sessionId || !riderUserId)
+      return res.status(400).json({ message: "sessionId and userID required" });
+
+    const rek = getRekognitionClient();
+    const getRes = await rek.send(
+      new GetFaceLivenessSessionResultsCommand({
+        SessionId: sessionId,
+      })
+    );
+
+    const confidence = getRes.Confidence ?? 0;
+    if (confidence < LIVENESS_CONFIDENCE_THRESHOLD) {
+      return res.status(400).json({ message: "Liveness check failed" });
+    }
+
+    const auditImages = getRes.AuditImages || [];
+    if (!auditImages.length) {
+      return res.status(400).json({ message: "No audit images returned." });
+    }
+
+    const chosen = auditImages.find((img) => img.Bytes) || auditImages[0];
+    const imageBuffer = auditImageToBuffer(chosen);
+    if (!imageBuffer) {
+      return res.status(500).json({ error: "Could not extract image" });
+    }
+
+    const searchCmd = new SearchFacesByImageCommand({
+      CollectionId: COLLECTION_ID,
+      Image: { Bytes: imageBuffer },
+      FaceMatchThreshold: FACE_MATCH_THRESHOLD,
+      MaxFaces: 1,
+    });
+
+    const searchRes = await rek.send(searchCmd);
+    const match = searchRes.FaceMatches?.[0] || null;
+    if (!match) {
+      return res.status(200).json({ message: "No facial match" });
+    }
+
+    const similarity = match.Similarity;
+    const matchedExternalId = match.Face?.ExternalImageId;
+
+    const verified =
+      String(matchedExternalId) === String(riderUserId) &&
+      similarity >= FACE_MATCH_THRESHOLD;
+
+    return res
+      .status(200)
+      .json({ verified, similarity, matchedExternalId, confidence });
+  } catch (err) {
+    console.error("verify error:", err);
+    return res.status(500).json({ error: err.message || err });
   }
 };
 
@@ -420,6 +593,23 @@ exports.deleteUser = async (req, res) => {
   }
 
   try {
+    if (!req.userId)
+      return res.status(400).json({ message: "userId is required" });
+
+    // find face records
+    const record = await Facial.findOne({ where: { riderUserId: req.userId } });
+
+    if (record) {
+      await rek.send(
+        new DeleteFacesCommand({
+          CollectionId: COLLECTION_ID,
+          FaceIds: record.faceId,
+        })
+      );
+      await Facial.destroy({ where: { riderUserId: req.userId } });
+    }
+
+    // delete DB rows
     await User.destroy({
       where: {
         id: req.userId,

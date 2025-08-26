@@ -5,13 +5,15 @@ const {
   signup,
   sentOtp,
   facialVeriSessionId,
-  facialVeriResult,
   googleOauthMobile,
   otpVerification,
   update,
   updatePushToken,
   updateNotification,
   deleteUser,
+  createFacialCollection,
+  facialRegistration,
+  verifyFacial,
 } = require("../controllers/auth.controller");
 // require("../config/passport");
 const multer = require("multer");
@@ -48,11 +50,17 @@ router.post(
 router.post("/update/token", [authJwt.verifyToken], updatePushToken);
 router.post("/update/notification", [authJwt.verifyToken], updateNotification);
 
+// To create Facial Collection
+router.get("/createCollection", createFacialCollection);
+
 // To create and send sessionId
 router.get("/send-sessionid", facialVeriSessionId);
 
+// To Register for facial Verification
+router.get("/registerFacial/:sessionId/:userId", facialRegistration);
+
 // To send sessionId Result
-router.get("/send-result/:sessionId", facialVeriResult);
+router.get("/verifyFacial/:sessionId/:userId", verifyFacial);
 
 // Web redirect flow (optional for web clients)
 // router.get("/google", passport.authenticate("google", {
