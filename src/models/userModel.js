@@ -46,7 +46,7 @@ module.exports = (sequelize, DataTypes) => {
     googleId: {
       type: DataTypes.STRING,
       unique: true,
-      allowNull: true, // null for users who signed up via email/password
+      allowNull: true,
     },
     referralCode: {
       type: DataTypes.STRING,

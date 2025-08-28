@@ -77,7 +77,7 @@ router.get("/verifyFacial/:sessionId/:userId", verifyFacial);
 // );
 
 // Google Oauth for mobile
-router.get("/google/mobile", googleOauthMobile);
+router.post("/google/mobile", googleOauthMobile);
 
 // Delete Account
 router.post("/delete", [authJwt.verifyToken, authJwt.verifyToken], deleteUser);

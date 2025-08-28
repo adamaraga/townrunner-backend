@@ -142,21 +142,15 @@ exports.sentOtp = async (req, res) => {
   const otp = generateOtp();
 
   try {
-    const existingUser = await User.findOne({
-      where: {
-        phone: req.body.phone,
-      },
-    });
+    // if (req.body.type === "login" && !existingUser) {
+    //   return res
+    //     .status(200)
+    //     .json({ warningMessage: "User not found, please signup" });
+    // }
 
-    if (req.body.type === "login" && !existingUser) {
-      return res
-        .status(200)
-        .json({ warningMessage: "User not found, please signup" });
-    }
-
-    if (req.body.type === "signup" && existingUser) {
-      return res.status(200).json({ warningMessage: "Please login" });
-    }
+    // if (req.body.type === "signup" && existingUser) {
+    //   return res.status(200).json({ warningMessage: "Please login" });
+    // }
 
     await Confirmation.destroy({
       where: {
@@ -185,7 +179,7 @@ exports.sentOtp = async (req, res) => {
 };
 
 exports.otpVerification = async (req, res) => {
-  const { phone, otp, type } = req.body;
+  const { phone, otp } = req.body;
   const channel = "sms";
 
   try {
@@ -211,16 +205,22 @@ exports.otpVerification = async (req, res) => {
     confirmation.verified = true;
     await confirmation.save();
 
-    if (type === "login") {
-      const user = await User.findOne({
-        where: { phone },
-      });
+    const user = await User.findOne({
+      where: {
+        phone,
+      },
+    });
 
-      if (!user) {
-        return res
-          .status(404)
-          .json({ success: false, message: "User not found, please signup" });
-      }
+    if (user) {
+      // const user = await User.findOne({
+      //   where: { phone },
+      // });
+
+      // if (!user) {
+      //   return res
+      //     .status(404)
+      //     .json({ success: false, message: "User not found, please signup" });
+      // }
 
       const token = jwt.sign(
         { id: user.id.toString() },
@@ -379,6 +379,7 @@ exports.facialVeriSessionId = async (req, res) => {
 
     res.status(200).json({ sessionId: response.SessionId });
   } catch (err) {
+    // console.log("err", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -529,7 +530,11 @@ exports.verifyFacial = async (req, res) => {
 };
 
 exports.googleOauthMobile = async (req, res) => {
-  const { idToken, referralCodeInvite } = req.body;
+  const { idToken } = req.body;
+
+  if (!idToken) {
+    return res.status(400).json({ message: "idToken is required" });
+  }
 
   try {
     const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -541,25 +546,48 @@ exports.googleOauthMobile = async (req, res) => {
     });
 
     const payload = ticket.getPayload();
-    const { sub, email, given_name, family_name, picture } = payload;
+    const { sub, email, family_name, given_name } = payload;
 
     // Find or create user
     let user = await User.findOne({ where: { googleId: sub } });
-    const referralCode = generator.generate({
-      length: 6,
-      numbers: true,
-    });
+    // const referralCode = generator.generate({
+    //   length: 6,
+    //   numbers: true,
+    // });
 
     if (!user) {
-      user = await User.create({
-        googleId: sub,
-        firstName: given_name,
-        lastName: family_name,
-        email: email,
-        image: picture,
-        referralCode,
-        referralCodeInvite,
+      let userWithEmail = await User.findOne({ where: { email } });
+
+      if (!userWithEmail) {
+        return res.status(200).json({
+          firstName: given_name,
+          lastName: family_name,
+          email: email,
+        });
+      }
+
+      userWithEmail.googleId = sub;
+      await userWithEmail.save();
+
+      const token = jwt.sign(
+        { id: userWithEmail.id.toString() },
+        process.env.SECRET_KEY,
+        {}
+      );
+
+      res.status(200).json({
+        ...userWithEmail?.dataValues,
+        accessToken: token,
       });
+      // user = await User.create({
+      //   googleId: sub,
+      //   firstName: given_name,
+      //   lastName: family_name,
+      //   email: email,
+      //   image: picture,
+      //   referralCode,
+      //   referralCodeInvite,
+      // });
     }
 
     const token = jwt.sign(

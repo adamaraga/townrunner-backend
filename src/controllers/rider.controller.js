@@ -122,12 +122,15 @@ exports.getRiderStatus = async (req, res) => {
     });
     const facial = await Facial.findOne({
       where: {
-        userId: req.userId,
+        riderUserId: req.userId,
       },
     });
     // if (!rider) return res.status(404).json({ message: "Rider Not found" });
-
-    res.json({
+    console.log("first", {
+      docStatus: !rider ? null : rider?.status,
+      facial: !facial ? null : "Done",
+    });
+    res.status(200).json({
       docStatus: !rider ? null : rider?.status,
       facial: !facial ? null : "Done",
     });
